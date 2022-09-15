@@ -158,7 +158,7 @@ class PyBoy:
             elif event == WindowEvent.RELEASE_SPEED_UP:
                 # Switch between unlimited and 1x real-time emulation speed
                 self.target_emulationspeed = int(bool(self.target_emulationspeed) ^ True)
-                logger.info("Speed limit: %s" % self.target_emulationspeed)
+                logger.info(f"Speed limit: {self.target_emulationspeed}")
             elif event == WindowEvent.STATE_SAVE:
                 with open(self.gamerom_file + ".state", "wb") as f:
                     self.mb.save_state(IntIOWrapper(f))
@@ -214,9 +214,9 @@ class PyBoy:
 
     def _update_window_title(self):
         avg_emu = self.avg_pre + self.avg_tick + self.avg_post
-        self.window_title = "CPU/frame: %0.2f%%" % ((self.avg_pre + self.avg_tick) / SPF * 100)
+        self.window_title = f"CPU/frame: {(self.avg_pre + self.avg_tick) / SPF * 100:0.2f}%"
         tolerance = 0.001 # 1ms. Avoid infinity and division by zero
-        self.window_title += " Emulation: x%s" % (round(SPF / avg_emu) if avg_emu > tolerance else "INF")
+        self.window_title += f" Emulation: x{round(SPF / avg_emu) if avg_emu > tolerance else 'INF'}"
         if self.paused:
             self.window_title += "[PAUSED]"
         self.window_title += self.plugin_manager.window_title()
