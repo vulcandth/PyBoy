@@ -8,7 +8,7 @@ import logging
 from pyboy.core.opcodes import CPU_COMMANDS
 from pyboy.utils import STATE_VERSION
 
-from . import bootrom, cartridge, cpu, interaction, lcd, ram, sound, timer
+from . import bootrom, cartridge, cpu, interaction, lcd, ram, serial, sound, timer
 
 INTR_VBLANK, INTR_LCDC, INTR_TIMER, INTR_SERIAL, INTR_HIGHTOLOW = [1 << x for x in range(5)]
 
@@ -26,6 +26,8 @@ class Motherboard:
         cgb,
         randomize=False,
         profiling=False,
+        serial_address=None,
+        serial_bind=None,
     ):
         if bootrom_file is not None:
             logger.info("Boot-ROM file provided")
@@ -43,6 +45,7 @@ class Motherboard:
         self.bootrom = bootrom.BootROM(bootrom_file, cgb)
         self.ram = ram.RAM(cgb, randomize=randomize)
         self.cpu = cpu.CPU(self, profiling)
+        self.serial = serial.Serial(serial_address, serial_bind)
 
         if cgb:
             self.lcd = lcd.CGBLCD(
@@ -105,6 +108,7 @@ class Motherboard:
 
     def stop(self, save):
         self.sound.stop()
+        self.serial.stop()
         if save:
             self.cartridge.stop()
 
@@ -210,9 +214,10 @@ class Motherboard:
                 cycles = min(
                     self.lcd.cycles_to_interrupt(),
                     self.timer.cycles_to_interrupt(),
-                    # self.serial.cycles_to_interrupt(),
-                    mode0_cycles
+                    self.serial.cycles_to_transmit(),
+                    mode0_cycles,
                 )
+                cycles = 4
 
                 # Profiling
                 self.cpu.add_opcode_hit(0x76, cycles // 4)
@@ -228,6 +233,8 @@ class Motherboard:
 
             if self.timer.tick(cycles):
                 self.cpu.set_interruptflag(INTR_TIMER)
+            if self.serial.tick(cycles):
+                self.cpu.set_interruptflag(INTR_SERIAL)
 
             lcd_interrupt = self.lcd.tick(cycles)
             if lcd_interrupt:
@@ -280,7 +287,13 @@ class Motherboard:
         elif 0xFEA0 <= i < 0xFF00: # Empty but unusable for I/O
             return self.ram.non_io_internal_ram0[i - 0xFEA0]
         elif 0xFF00 <= i < 0xFF4C: # I/O ports
-            if i == 0xFF04:
+            if i == 0xFF01:
+                logger.info(f"get SB {self.serial.SB}")
+                return self.serial.SB
+            elif i == 0xFF02:
+                logger.info(f"get SC {self.serial.SC}")
+                return self.serial.SC
+            elif i == 0xFF04:
                 return self.timer.DIV
             elif i == 0xFF05:
                 return self.timer.TIMA
@@ -398,8 +411,14 @@ class Motherboard:
             if i == 0xFF00:
                 self.ram.io_ports[i - 0xFF00] = self.interaction.pull(value)
             elif i == 0xFF01:
+                self.serial.SB = value
+                logger.info(f"SB: {value:02x}")
+
                 self.serialbuffer += chr(value)
                 self.ram.io_ports[i - 0xFF00] = value
+            elif i == 0xFF02:
+                self.serial.SC = value
+                logger.info(f"SC: {value:02x}")
             elif i == 0xFF04:
                 self.timer.reset()
             elif i == 0xFF05:

@@ -88,6 +88,8 @@ class PyBoy:
             cgb,
             randomize=randomize,
             profiling=profiling,
+            serial_address=kwargs["serial_address"],
+            serial_bind=kwargs["serial_bind"],
         )
 
         # Performance measures
