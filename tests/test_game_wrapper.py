@@ -22,5 +22,5 @@ def test_game_wrapper_basics(default_rom):
 
     generic_wrapper = pyboy.game_wrapper
     assert generic_wrapper is not None
-    # pyboy.game_area()
+    pyboy.game_area()
     pyboy.stop()
