@@ -27,8 +27,8 @@ def test_dmg_acid(cgb, dmg_acid_file):
         png_path.parents[0].mkdir(parents=True, exist_ok=True)
         image.save(png_path)
     else:
-        old_image = PIL.Image.open(png_path)
-        diff = PIL.ImageChops.difference(image.convert(mode="RGB"), old_image)
+        old_image = PIL.Image.open(png_path).convert("RGBA")
+        diff = PIL.ImageChops.difference(image, old_image)
         if diff.getbbox() and not os.environ.get("TEST_CI"):
             image.show()
             old_image.show()

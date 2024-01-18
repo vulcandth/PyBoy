@@ -141,7 +141,7 @@ def test_tiles_cgb(any_rom_cgb):
 
 
 def test_screen_buffer_and_image(tetris_rom, boot_rom):
-    cformat = "RGBX"
+    cformat = "RGBA"
     boot_logo_hash_predigested = b"_M\x0e\xd9\xe2\xdb\\o]\x83U\x93\xebZm\x1e\xaaFR/Q\xa52\x1c{8\xe7g\x95\xbcIz"
 
     pyboy = PyBoy(tetris_rom, window_type="null", bootrom_file=boot_rom)
@@ -166,10 +166,10 @@ def test_screen_buffer_and_image(tetris_rom, boot_rom):
         b"\xa4\x0eR&\xda9\xfcg\xf7\x0f|\xba}\x08\xb6$"
     )
     boot_logo_png_hash = hashlib.sha256()
-    image = pyboy.screen.image
+    image = pyboy.screen.image.convert("RGB")
     assert isinstance(image, PIL.Image.Image)
     image_data = io.BytesIO()
-    image.convert(mode="RGB").save(image_data, format="BMP")
+    image.save(image_data, format="BMP")
     boot_logo_png_hash.update(image_data.getvalue())
     assert boot_logo_png_hash.digest() == boot_logo_png_hash_predigested
 

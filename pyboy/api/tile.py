@@ -116,9 +116,9 @@ class Tile:
             return None
 
         if cythonmode:
-            return Image.fromarray(self._image_data().base, mode="RGBX")
+            return Image.fromarray(self._image_data().base, mode=self.raw_buffer_format)
         else:
-            return Image.frombytes("RGBX", (8, 8), self._image_data())
+            return Image.frombytes(self.raw_buffer_format, (8, 8), self._image_data())
 
     def image_ndarray(self):
         """

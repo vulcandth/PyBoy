@@ -32,9 +32,9 @@ def test_shonumi(rom, shonumi_dir):
     png_path.parents[0].mkdir(parents=True, exist_ok=True)
     image = pyboy.screen.image
 
-    old_image = PIL.Image.open(png_path)
+    old_image = PIL.Image.open(png_path).convert("RGBA")
     old_image = old_image.resize(image.size, resample=PIL.Image.Dither.NONE)
-    diff = PIL.ImageChops.difference(image.convert(mode="RGB"), old_image)
+    diff = PIL.ImageChops.difference(image, old_image)
 
     if diff.getbbox() and not os.environ.get("TEST_CI"):
         image.show()
