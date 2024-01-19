@@ -12,9 +12,11 @@ from . import bootrom, cartridge, cpu, interaction, lcd, ram, sound, timer
 INTR_VBLANK, INTR_LCDC, INTR_TIMER, INTR_SERIAL, INTR_HIGHTOLOW = [1 << x for x in range(5)]
 
 import pyboy
+import numpy as np
 
 logger = pyboy.logging.get_logger(__name__)
 
+TOTAL_COMBINATIONS = 2220159  # As calculated earlier
 
 class Motherboard:
     def __init__(
@@ -81,6 +83,8 @@ class Motherboard:
         self.breakpoints_enabled = False # breakpoints_enabled
         self.breakpoints_list = [] #[(0, 0x150), (0, 0x0040), (0, 0x0048), (0, 0x0050)]
         self.breakpoint_latch = 0
+
+        self.execution_counts = np.zeros(TOTAL_COMBINATIONS, dtype=np.int32)
 
     def switch_speed(self):
         bit0 = self.key1 & 0b1
@@ -194,6 +198,26 @@ class Motherboard:
         b = (not self.lcd.frame_done)
         self.lcd.frame_done = False # Clear vblank flag for next iteration
         return b
+
+    def update_execution_count(self):
+        address = self.cpu.PC
+        index = -1
+        if address <= 0x3FFF:
+            index = address
+        elif address <= 0x7FFF:
+            index = (0x4000 * self.cartridge.rombank_selected) + address
+        elif 0xA000 <= address <= 0xBFFF:
+            index = address + (self.cartridge.rambank_selected * 0x2000) + (0x4000 * 0x80) - (0xA000 - 0x8000)
+        elif 0xC000 <= address <= 0xCFFF:
+            index = address + (0x4000 * 0x80) + (0x2000 * 4)
+        elif 0xD000 <= address <= 0xDFFF:
+            index = address - 0xD000 + (self.ram.rambank_selected * 0x1000) + (0x4000 * 0x80) + (0x2000 * 4)
+        elif 0xFF80 <= address <= 0xFFFF:
+            index = address - 0xFF80 + (0x4000 * 0x80) + (0x2000 * 4) + 0x2000
+        if index != -1:
+            self.execution_counts[index] += 1
+
+
 
     def tick(self):
         while self.processing_frame():
